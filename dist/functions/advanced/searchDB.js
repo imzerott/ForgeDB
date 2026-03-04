@@ -50,18 +50,28 @@ exports.default = new forgescript_1.NativeFunction({
     ],
     brackets: true,
     async execute(_ctx, [name, id, type, value, guild]) {
+        const isMongo = util_1.DataBase.type === "mongodb";
+
+        if (isMongo) {
+            let results = await util_1.DataBase.getAll();
+            const namePattern = name ? new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "i") : null;
+            const valuePattern = value ? new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "i") : null;
+            const resolvedType = type != null ? util_1.VariableType[type]?.toString() : null;
+            if (namePattern) results = results.filter(r => namePattern.test(r.name));
+            if (id) results = results.filter(r => r.id === id);
+            if (resolvedType) results = results.filter(r => r.type === resolvedType);
+            if (valuePattern) results = results.filter(r => valuePattern.test(r.value));
+            if (guild) results = results.filter(r => r.guildId === guild.id);
+            return this.successJSON(results);
+        }
+
         let search = {};
-        if (name)
-            search = { ...search, name: (0, typeorm_1.Like)(name) };
-        if (id)
-            search = { ...search, id };
-        if (type)
-            search = { ...search, type: util_1.VariableType[type]?.toString() };
-        if (value)
-            search = { ...search, value: (0, typeorm_1.Like)(value) };
-        if (guild)
-            search = { ...search, guildId: guild.id };
+        if (name) search = { ...search, name: (0, typeorm_1.Like)(name) };
+        if (id) search = { ...search, id };
+        if (type != null) search = { ...search, type: util_1.VariableType[type]?.toString() };
+        if (value) search = { ...search, value: (0, typeorm_1.Like)(value) };
+        if (guild) search = { ...search, guildId: guild.id };
+
         return this.successJSON(await util_1.DataBase.find({ ...search }));
     },
 });
-//# sourceMappingURL=searchDB.js.map
